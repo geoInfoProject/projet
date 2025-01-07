@@ -1,5 +1,7 @@
 package com.GestionDossiers.demande_autorisation.service;
 import com.GestionDossiers.demande_autorisation.entities.Status;
+import com.GestionDossiers.demande_autorisation.dto.DemandeDTO;
+import com.GestionDossiers.demande_autorisation.entities.Client;
 import com.GestionDossiers.demande_autorisation.entities.Commun;
 import com.GestionDossiers.demande_autorisation.entities.Demande;
 import com.GestionDossiers.demande_autorisation.entities.Document;
@@ -82,8 +84,8 @@ public class DemandeService {
         return demandeRepository.save(demande);
     }
 
-    public List<Demande> getAllDemandes() {
-        return demandeRepository.findAll();
+    public List<DemandeDTO> getAllDemandes() {
+        return demandeRepository.findAllDemandeDTOs();
     }
 
     public List<Demande> rechercherDemande(String statut, String type, String commune) {
@@ -101,13 +103,12 @@ public class DemandeService {
         return demandeRepository.rechercherParClient(clientId, statut, type, commune);
     }
 
-    public Demande getDemandeByIdAndCin(Long id, String cin) {
-        if (id == null || cin == null || cin.isEmpty()) {
-            throw new IllegalArgumentException("L'ID et le CIN ne peuvent pas être nuls ou vides.");
+    public List<Demande> getDemandesByCin(String cin) {
+        if (cin == null || cin.isEmpty()) {
+            throw new IllegalArgumentException("Le CIN ne peut pas être nul ou vide.");
         }
 
-        return demandeRepository.findByIdAndClient_Cin(id, cin)
-                .orElseThrow(() -> new RuntimeException("Aucune demande trouvée avec l'ID : " + id + " et le CIN : " + cin));
+        return demandeRepository.findAllByClient_Cin(cin);
     }
 
     @Transactional
@@ -125,6 +126,55 @@ public Demande modifierStatut(Long demandeId, String statut) {
 
     // Sauvegarder et retourner la demande mise à jour
     return demandeRepository.save(demande);
-}
+}  
+    /**
+     * Supprime une demande par ID.
+     *
+     * @param id l'ID de la demande à supprimer.
+     */
+    @Autowired
+    private FileUploadService fileUploadService;
 
+    public void deleteDemande(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("L'ID de la demande ne peut pas être nul.");
+        }
+
+        if (!demandeRepository.existsById(id)) {
+            throw new RuntimeException("Demande non trouvée avec l'ID : " + id);
+        }
+
+        // Supprime la demande
+        demandeRepository.deleteById(id);
+
+        // Supprime le répertoire correspondant aux documents
+        fileUploadService.deleteDirectory(String.valueOf(id));
+    }
+    /**
+     * Récupère les informations de la commune associée à une demande via son ID.
+     *
+     * @param demandeId l'ID de la demande.
+     * @return les informations de la commune correspondante.
+     */
+    public Commun getCommuneByDemandeId(Long demandeId) {
+        // Vérifier que l'ID de la demande n'est pas nul
+        if (demandeId == null) {
+            throw new IllegalArgumentException("L'ID de la demande ne peut pas être nul.");
+        }
+
+        // Récupérer la demande avec son ID
+        Demande demande = demandeRepository.findById(demandeId)
+                .orElseThrow(() -> new RuntimeException("Demande non trouvée avec l'ID : " + demandeId));
+
+        // Retourner la commune associée
+        return demande.getCommune();
+        
+    }
+    public Client getClientByDemandeId(Long id) {
+        return demandeRepository.findClientByDemandeId(id)
+                .orElseThrow(() -> new RuntimeException("Aucun client trouvé pour la demande avec ID : " + id));
+    }
+   
+
+   
 }

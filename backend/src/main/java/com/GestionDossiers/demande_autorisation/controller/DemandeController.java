@@ -1,4 +1,7 @@
 package com.GestionDossiers.demande_autorisation.controller;
+import com.GestionDossiers.demande_autorisation.dto.DemandeDTO;
+import com.GestionDossiers.demande_autorisation.entities.Client;
+import com.GestionDossiers.demande_autorisation.entities.Commun;
 import com.GestionDossiers.demande_autorisation.entities.Demande;
 import com.GestionDossiers.demande_autorisation.entities.Document;
 import com.GestionDossiers.demande_autorisation.service.DemandeService;
@@ -76,7 +79,7 @@ public class DemandeController {
      * Récupérer toutes les demandes.
      */
     @GetMapping
-    public ResponseEntity<List<Demande>> getAllDemandes() {
+    public ResponseEntity<List<DemandeDTO>> getAllDemandes() {
         return ResponseEntity.ok(demandeService.getAllDemandes());
     }
 
@@ -89,13 +92,12 @@ public class DemandeController {
     }
 
     /**
-     * Récupérer une demande par ID et CIN du client.
+     * Récupérer une demande par  CIN du client.
      */
-    @GetMapping("/{id}/client")
-    public ResponseEntity<Demande> getDemandeByIdAndCin(
-            @PathVariable Long id,
-            @RequestParam String cin) {
-        return ResponseEntity.ok(demandeService.getDemandeByIdAndCin(id, cin));
+    @GetMapping("/client")
+    public ResponseEntity<List<Demande>> getDemandesByCin(@RequestParam String cin) {
+        List<Demande> demandes = demandeService.getDemandesByCin(cin);
+        return ResponseEntity.ok(demandes);
     }
 
     /**
@@ -108,6 +110,7 @@ public class DemandeController {
             @RequestParam(required = false) String commune) {
         return demandeService.rechercherDemande(statut, type, commune);
     }
+    
 
     /**
      * Recherche des demandes avec ID client obligatoire et critères facultatifs.
@@ -132,5 +135,41 @@ public class DemandeController {
     }
 
 
+    /**
+     * Suppression d'une demande par ID.
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteDemande(@PathVariable Long id) {
+        try {
+            demandeService.deleteDemande(id);
+            return ResponseEntity.ok("Demande supprimée avec succès.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+    /**
+     * Récupère les informations de la commune associée à une demande via son ID.
+     *
+     * @param demandeId l'ID de la demande.
+     * @return les informations de la commune correspondante.
+     */
+    @GetMapping("/{demandeId}/commune")
+    public ResponseEntity<Commun> getCommuneByDemandeId(@PathVariable Long demandeId) {
+        try {
+            Commun commune = demandeService.getCommuneByDemandeId(demandeId);
+            if (commune == null) {
+                return ResponseEntity.notFound().build(); // 404 si la commune n'est pas trouvée
+            }
+            return ResponseEntity.ok(commune);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // 500 en cas d'erreur
+        }
+    }
+    @GetMapping("/{id}/client")
+    public ResponseEntity<Client> getClientByDemandeId(@PathVariable Long id) {
+        Client client = demandeService.getClientByDemandeId(id);
+        return ResponseEntity.ok(client);
+    }
+   
 
 }
